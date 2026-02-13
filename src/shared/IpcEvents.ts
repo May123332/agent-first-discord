@@ -60,7 +60,7 @@ export const enum IpcEvents {
     DEVTOOLS_CLOSED = "VCD_DEVTOOLS_CLOSED",
 
     AGENT_GET_MODE = "VCD_AGENT_GET_MODE",
-    AGENT_CHAT = "VCD_AGENT_CHAT"
+    AGENT_INVOKE = "VCD_AGENT_INVOKE"
 }
 
 export const enum IpcCommands {
