@@ -30,3 +30,26 @@ jobs:
               run: |
                   pnpm build
                   pnpm build --dev
+
+    mobile-placeholders:
+        runs-on: ubuntu-latest
+        continue-on-error: true
+
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
+
+            - name: Use Node.js 20
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: "pnpm"
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Mobile lint placeholder (non-blocking)
+              run: pnpm run mobile:lint --if-present
+
+            - name: Mobile typecheck placeholder (non-blocking)
+              run: pnpm run mobile:typecheck --if-present
