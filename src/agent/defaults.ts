@@ -1,6 +1,27 @@
+/*
+ * Vesktop, a desktop app aiming to give you a snappier Discord Experience
+ * Copyright (c) 2026 Vendicated and Vesktop contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 import type { AgentSettings } from "shared/settings";
 
-export const DEFAULT_AGENT_SETTINGS: Required<Pick<AgentSettings, "enabled" | "mode" | "localUrl" | "onlineProvider" | "onlineModel" | "localModel" | "temperature" | "maxTokens" | "invocationPrefix" | "mentionName" | "rateLimitPerMinute">> = {
+export const DEFAULT_AGENT_SETTINGS: Required<
+    Pick<
+        AgentSettings,
+        | "enabled"
+        | "mode"
+        | "localUrl"
+        | "onlineProvider"
+        | "onlineModel"
+        | "localModel"
+        | "temperature"
+        | "maxTokens"
+        | "invocationPrefix"
+        | "mentionName"
+        | "rateLimitPerMinute"
+    >
+> = {
     enabled: true,
     mode: "local",
     localUrl: process.env.LOCAL_LLM_URL ?? "http://localhost:8000/v1/chat/completions",

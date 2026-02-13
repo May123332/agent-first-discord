@@ -17,6 +17,7 @@ import { AutoStartToggle } from "./AutoStartToggle";
 import { DeveloperOptionsButton } from "./DeveloperOptions";
 import { DiscordBranchPicker } from "./DiscordBranchPicker";
 import { NotificationBadgeToggle } from "./NotificationBadgeToggle";
+import { RateRepoButton } from "./RateRepoButton";
 import { VesktopSettingsSwitch } from "./VesktopSettingsSwitch";
 import { WindowsTransparencyControls } from "./WindowsTransparencyControls";
 
@@ -134,7 +135,8 @@ const SettingsOptions: Record<string, Array<BooleanSetting | SettingsComponent>>
             title: "Open Links in app (experimental)",
             description: "Opens links in a new Vesktop window instead of your web browser",
             defaultValue: false
-        }
+        },
+        RateRepoButton
     ],
     "Developer Options": [DeveloperOptionsButton],
     "AI Agent": [AgentSettings]

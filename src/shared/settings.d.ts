@@ -47,8 +47,6 @@ export interface Settings {
     };
 }
 
-
-
 export type AgentMode = "local" | "online";
 
 export interface AgentSettings {
