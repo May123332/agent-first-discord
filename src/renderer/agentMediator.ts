@@ -1,5 +1,6 @@
 import { withAgentDefaults } from "agent/defaults";
-import type { AgentChatMessage } from "agent/types";
+import { checkAgentPolicy } from "agent/policy";
+import type { AgentChatMessage, AgentInvocationContext } from "agent/types";
 
 import { VesktopLogger } from "./logger";
 import { Settings } from "./settings";
@@ -45,14 +46,29 @@ function buildHistory(messages: HTMLElement[]): AgentChatMessage[] {
     }));
 }
 
+function parseChannelContext(): AgentInvocationContext {
+    const [guildId, channelId] = location.pathname.split("/").slice(-2);
+    return { guildId, channelId };
+}
+
+function sendComposerMessage(content: string) {
+    const composer = document.querySelector('[role="textbox"]') as HTMLElement | null;
+    if (!composer) return false;
+
+    composer.focus();
+    document.execCommand("insertText", false, content);
+    composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    return true;
+}
+
 export function initAgentMediator() {
     const observer = new MutationObserver(() => {
         const settings = withAgentDefaults(Settings.store.agent);
         if (!settings.enabled) return;
 
-        const channel = location.pathname.split("/").slice(-1)[0];
-        if (settings.enabledChannels?.length && !settings.enabledChannels.includes(channel)) return;
-        if (inFlightChannels.has(channel)) return;
+        const context = parseChannelContext();
+        const channel = context.channelId;
+        if (!channel || inFlightChannels.has(channel)) return;
 
         const latestMessageData = getLatestMessageData();
         if (!latestMessageData) return;
@@ -63,6 +79,14 @@ export function initAgentMediator() {
         const content = latest.innerText?.trim();
         if (!content || !shouldInvoke(content, settings.mentionName!, settings.invocationPrefix!)) return;
         if (!contentAllowed(content)) return;
+
+        const policy = checkAgentPolicy(settings, context);
+        if (!policy.allowed) {
+            if (sendComposerMessage("agent disabled in this channel")) {
+                lastHandledMessageByChannel.set(channel, latestMessageId);
+            }
+            return;
+        }
 
         const bucket = invocationTimes.get(channel) ?? [];
         const rate = nowMinuteWindow(bucket, settings.rateLimitPerMinute!);
@@ -82,17 +106,13 @@ export function initAgentMediator() {
         ].join("\n");
 
         inFlightChannels.add(channel);
-        VesktopNative.agent.chat(prompt, buildHistory(messages), settings)
+        VesktopNative.agent.chat(prompt, buildHistory(messages), settings, context)
             .then(reply => {
                 if (!reply?.content) return;
 
-                const composer = document.querySelector('[role="textbox"]') as HTMLElement | null;
-                if (!composer) return;
-
-                composer.focus();
-                document.execCommand("insertText", false, reply.content);
-                composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-                lastHandledMessageByChannel.set(channel, latestMessageId);
+                if (sendComposerMessage(reply.content)) {
+                    lastHandledMessageByChannel.set(channel, latestMessageId);
+                }
             })
             .catch(err => {
                 VesktopLogger.error("Agent reply failed", err);

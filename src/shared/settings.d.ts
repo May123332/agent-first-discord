@@ -51,6 +51,17 @@ export interface Settings {
 
 export type AgentMode = "local" | "online";
 
+export type AgentPolicyPrecedence = "deny" | "allow";
+
+export interface AgentPolicySettings {
+    allowedGuildIds?: Record<string, true>;
+    deniedGuildIds?: Record<string, true>;
+    allowedChannelIds?: Record<string, true>;
+    deniedChannelIds?: Record<string, true>;
+    requiredInvokerRoles?: Record<string, string[]>;
+    precedence?: AgentPolicyPrecedence;
+}
+
 export interface AgentSettings {
     enabled?: boolean;
     mode?: AgentMode;
@@ -62,7 +73,9 @@ export interface AgentSettings {
     maxTokens?: number;
     invocationPrefix?: string;
     mentionName?: string;
+    /** @deprecated use policy.allowedChannelIds instead */
     enabledChannels?: string[];
+    policy?: AgentPolicySettings;
     rateLimitPerMinute?: number;
 }
 
