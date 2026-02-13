@@ -24,6 +24,8 @@ import { enableHardwareAcceleration } from "main";
 import { release } from "os";
 import { join } from "path";
 import { debounce } from "shared/utils/debounce";
+import type { AgentChatMessage } from "agent/types";
+import type { AgentSettings } from "shared/settings";
 
 import { IpcEvents } from "../shared/IpcEvents";
 import { setBadgeCount } from "./appBadge";
@@ -161,7 +163,7 @@ handle(IpcEvents.DEBUG_LAUNCH_GPU, () => openDebugPage("chrome://gpu"));
 handle(IpcEvents.DEBUG_LAUNCH_WEBRTC_INTERNALS, () => openDebugPage("chrome://webrtc-internals"));
 
 handleSync(IpcEvents.AGENT_GET_MODE, () => getCurrentAgentMode());
-handle(IpcEvents.AGENT_CHAT, async (_, prompt: string, history: any[], settings?: any) => {
+handle(IpcEvents.AGENT_CHAT, async (_, prompt: string, history: AgentChatMessage[], settings?: AgentSettings) => {
     return chatWithAgent(prompt, history, settings);
 });
 
