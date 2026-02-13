@@ -63,6 +63,8 @@ export interface AgentSettings {
     invocationPrefix?: string;
     mentionName?: string;
     enabledChannels?: string[];
+    toolEnabledChannels?: string[];
+    toolEnabledGuilds?: string[];
     rateLimitPerMinute?: number;
 }
 

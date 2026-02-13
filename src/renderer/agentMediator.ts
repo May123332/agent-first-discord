@@ -1,7 +1,9 @@
 import { withAgentDefaults } from "agent/defaults";
-import type { AgentChatMessage } from "agent/types";
+import { getReadSafeToolMap, READ_SAFE_TOOLS } from "agent/tools";
+import type { AgentChatMessage, AgentToolResult } from "agent/types";
 
 import { VesktopLogger } from "./logger";
+import { logAgentTool } from "./agentLogStore";
 import { Settings } from "./settings";
 
 const invocationTimes = new Map<string, number[]>();
@@ -45,12 +47,29 @@ function buildHistory(messages: HTMLElement[]): AgentChatMessage[] {
     }));
 }
 
+function getRouteContext() {
+    const [, , guildId, channelId] = location.pathname.split("/");
+    return {
+        guildId: guildId && guildId !== "@me" ? guildId : undefined,
+        channelId
+    };
+}
+
+function canRunTools(guildId: string | undefined, channelId: string, toolChannelAllowlist: string[], toolGuildAllowlist: string[]) {
+    const channelAllowed = !toolChannelAllowlist.length || toolChannelAllowlist.includes(channelId);
+    const guildAllowed = !toolGuildAllowlist.length || (!!guildId && toolGuildAllowlist.includes(guildId));
+    return channelAllowed && guildAllowed;
+}
+
 export function initAgentMediator() {
+    const toolMap = getReadSafeToolMap();
+
     const observer = new MutationObserver(() => {
         const settings = withAgentDefaults(Settings.store.agent);
         if (!settings.enabled) return;
 
-        const channel = location.pathname.split("/").slice(-1)[0];
+        const { channelId: channel, guildId } = getRouteContext();
+        if (!channel) return;
         if (settings.enabledChannels?.length && !settings.enabledChannels.includes(channel)) return;
         if (inFlightChannels.has(channel)) return;
 
@@ -74,6 +93,9 @@ export function initAgentMediator() {
             .map(node => (node as HTMLElement).innerText)
             .filter(Boolean);
 
+        const toolsAllowed = canRunTools(guildId, channel, settings.toolEnabledChannels ?? [], settings.toolEnabledGuilds ?? []);
+        const tools = toolsAllowed ? READ_SAFE_TOOLS.map(tool => ({ name: tool.name, schema: tool.schema })) : [];
+
         const prompt = [
             `Channel ID: ${channel}`,
             `Participants: ${Array.from(new Set(participants)).join(", ")}`,
@@ -82,7 +104,86 @@ export function initAgentMediator() {
         ].join("\n");
 
         inFlightChannels.add(channel);
-        VesktopNative.agent.chat(prompt, buildHistory(messages), settings)
+        (async () => {
+            const toolResults: AgentToolResult[] = [];
+            const messageSnapshot = messages.map(message => message.innerText.slice(0, 1200));
+
+            for (let step = 0; step < 3; step++) {
+                const reply = await VesktopNative.agent.chat({
+                    prompt,
+                    history: buildHistory(messages),
+                    settings,
+                    tools,
+                    toolResults
+                });
+
+                if (!reply.toolRequests?.length) return reply;
+
+                for (const request of reply.toolRequests) {
+                    const tool = toolMap.get(request.name);
+                    if (!tool) continue;
+
+                    if (!toolsAllowed) {
+                        toolResults.push({
+                            requestId: request.id,
+                            name: request.name,
+                            content: "Tool use blocked: this channel/guild is not allowlisted.",
+                            isError: true
+                        });
+                        logAgentTool({
+                            timestamp: new Date().toISOString(),
+                            channelId: channel,
+                            guildId,
+                            toolName: request.name,
+                            summary: "Blocked by allowlist",
+                            status: "blocked"
+                        });
+                        continue;
+                    }
+
+                    try {
+                        const result = await tool.execute(request.arguments, {
+                            channelId: channel,
+                            guildId,
+                            messages: messageSnapshot,
+                            participants: Array.from(new Set(participants))
+                        });
+                        toolResults.push({
+                            requestId: request.id,
+                            name: request.name,
+                            content: result.content,
+                            isError: result.isError
+                        });
+                        logAgentTool({
+                            timestamp: new Date().toISOString(),
+                            channelId: channel,
+                            guildId,
+                            toolName: request.name,
+                            summary: result.content.slice(0, 120),
+                            status: result.isError ? "error" : "ok"
+                        });
+                    } catch (error) {
+                        const reason = String(error);
+                        toolResults.push({
+                            requestId: request.id,
+                            name: request.name,
+                            content: reason,
+                            isError: true
+                        });
+                        logAgentTool({
+                            timestamp: new Date().toISOString(),
+                            channelId: channel,
+                            guildId,
+                            toolName: request.name,
+                            summary: reason,
+                            status: "error"
+                        });
+                    }
+                }
+            }
+
+            return { content: "" };
+        })()
             .then(reply => {
                 if (!reply?.content) return;
 
