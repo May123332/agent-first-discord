@@ -35,6 +35,55 @@ jobs:
                   echo "github.ref_name: ${{ github.ref_name }}"
                   echo "matrix.platform: ${{ matrix.platform }}"
 
+            - name: Preflight | Validate platform icon assets
+              run: |
+                  case "${{ matrix.platform }}" in
+                    mac)
+                      ICON_PATH="build/icon.icns"
+                      ;;
+                    windows)
+                      ICON_PATH="build/icon.ico"
+                      ;;
+                    linux)
+                      ICON_PATH="build/icon.svg"
+                      ;;
+                    *)
+                      echo "Unknown platform: ${{ matrix.platform }}"
+                      exit 1
+                      ;;
+                  esac
+
+                  if [ ! -f "$ICON_PATH" ]; then
+                    echo "Missing required ${{ matrix.platform }} icon asset: $ICON_PATH"
+                    exit 1
+                  fi
+
+                  echo "Found required icon for ${{ matrix.platform }} at $ICON_PATH"
+
+            - name: Preflight | Verify macOS signing and notarization secrets
+              if: ${{ matrix.platform == 'mac' }}
+              env:
+                  APPLE_SIGNING_CERT: ${{ secrets.APPLE_SIGNING_CERT }}
+                  APPLE_SIGNING_CERT_PASSWORD: ${{ secrets.APPLE_SIGNING_CERT_PASSWORD }}
+                  APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+                  APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+                  APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+              run: |
+                  missing=0
+                  for secret_name in APPLE_SIGNING_CERT APPLE_SIGNING_CERT_PASSWORD APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER; do
+                    if [ -z "${!secret_name}" ]; then
+                      echo "Missing required secret: $secret_name"
+                      missing=1
+                    fi
+                  done
+
+                  if [ "$missing" -ne 0 ]; then
+                    echo "One or more required macOS signing/notarization secrets are missing."
+                    exit 1
+                  fi
+
+                  echo "All required macOS signing/notarization secrets are present."
+
             - name: Use Node.js 20
               uses: actions/setup-node@v4
               with:
