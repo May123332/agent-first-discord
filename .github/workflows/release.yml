@@ -42,7 +42,13 @@ jobs:
                   cache: "pnpm"
 
             - name: Install dependencies
-              run: pnpm install --frozen-lockfile
+              run: pnpm install --frozen-lockfile --ignore-scripts
+
+            - name: Update arRPC database (best effort)
+              run: pnpm updateArrpcDB || echo "arrpc DB update failed; continuing with cached data"
+
+            - name: Validate arRPC detectable database JSON
+              run: node -e "JSON.parse(require('node:fs').readFileSync('node_modules/arrpc/src/process/detectable.json', 'utf8'))"
 
             - name: Build
               run: pnpm build

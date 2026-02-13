@@ -48,3 +48,11 @@ Platform notes:
 - Keep Electron main-process, renderer, and AI integration logic modular.
 - Prefer additions under `src/agent` for model integration and orchestration.
 - Document platform-specific caveats in PRs.
+
+### CI install behavior for releases
+
+The release workflow intentionally installs dependencies with scripts disabled (`pnpm install --frozen-lockfile --ignore-scripts`) to avoid brittle postinstall failures from optional tooling. It then runs only the required arRPC update step explicitly, in a best-effort mode:
+
+- `pnpm updateArrpcDB || echo "arrpc DB update failed; continuing with cached data"`
+
+Before packaging, CI also validates that `node_modules/arrpc/src/process/detectable.json` is valid JSON so releases fail early if the generated/cached arRPC data is malformed.
