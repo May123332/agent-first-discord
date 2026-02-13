@@ -26,9 +26,9 @@ import { join } from "path";
 import { debounce } from "shared/utils/debounce";
 
 import { IpcEvents } from "../shared/IpcEvents";
+import { chatWithAgent, getCurrentAgentMode } from "./agentService";
 import { setBadgeCount } from "./appBadge";
 import { autoStart } from "./autoStart";
-import { chatWithAgent, getCurrentAgentMode } from "./agentService";
 import { VENCORD_FILES_DIR, VENCORD_QUICKCSS_FILE, VENCORD_THEMES_DIR } from "./constants";
 import { mainWin } from "./mainWindow";
 import { Settings, State } from "./settings";

@@ -1,7 +1,13 @@
+/*
+ * Vesktop, a desktop app aiming to give you a snappier Discord Experience
+ * Copyright (c) 2026 Vendicated and Vesktop contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 import { dialog } from "electron";
+import { Settings } from "main/settings";
 import type { AgentMode } from "shared/settings";
 
-import { Settings } from "main/settings";
 import type { AgentStartupChoice } from "./types";
 
 const CLI_ARG = "--agent-mode=";
