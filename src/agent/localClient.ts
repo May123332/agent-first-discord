@@ -1,11 +1,44 @@
 import type { AgentSettings } from "shared/settings";
 
-import type { AgentChatMessage, AgentClient, AgentResponse } from "./types";
+import type { AgentClient, AgentPromptTurn, AgentResponse, AgentToolRequest } from "./types";
 import { withAgentDefaults } from "./defaults";
 
+function toOpenAiMessages(turn: AgentPromptTurn) {
+    const base = [...turn.history.map(h => ({ role: h.role, content: h.content })), { role: "user", content: turn.prompt }];
+    if (!turn.toolResults?.length) return base;
+
+    return [
+        ...base,
+        ...turn.toolResults.map(result => ({
+            role: "tool",
+            tool_call_id: result.requestId,
+            content: result.content
+        }))
+    ];
+}
+
+function parseToolRequests(data: any): AgentToolRequest[] {
+    const calls = data?.choices?.[0]?.message?.tool_calls;
+    if (!Array.isArray(calls)) return [];
+
+    return calls
+        .map((call): AgentToolRequest | undefined => {
+            try {
+                return {
+                    id: String(call.id),
+                    name: String(call.function?.name),
+                    arguments: JSON.parse(call.function?.arguments || "{}")
+                };
+            } catch {
+                return void 0;
+            }
+        })
+        .filter((call): call is AgentToolRequest => !!call);
+}
+
 export class LocalLlmClient implements AgentClient {
-    async sendMessage(prompt: string, history: AgentChatMessage[], settings: AgentSettings): Promise<AgentResponse> {
-        const resolved = withAgentDefaults(settings);
+    async sendMessage(turn: AgentPromptTurn): Promise<AgentResponse> {
+        const resolved = withAgentDefaults(turn.settings as AgentSettings);
 
         const response = await fetch(resolved.localUrl!, {
             method: "POST",
@@ -16,7 +49,8 @@ export class LocalLlmClient implements AgentClient {
                 model: resolved.localModel,
                 temperature: resolved.temperature,
                 max_tokens: resolved.maxTokens,
-                messages: [...history.map(h => ({ role: h.role, content: h.content })), { role: "user", content: prompt }]
+                messages: toOpenAiMessages(turn),
+                tools: turn.tools?.map(tool => ({ type: "function", function: { name: tool.name, parameters: tool.schema } }))
             })
         }).catch(err => {
             throw new Error(`Failed to reach local LLM server at ${resolved.localUrl}: ${String(err)}`);
@@ -27,9 +61,10 @@ export class LocalLlmClient implements AgentClient {
         }
 
         const data = await response.json() as any;
-        const content = data?.choices?.[0]?.message?.content;
-        if (!content) throw new Error("Local LLM server returned an unexpected response.");
+        const content = data?.choices?.[0]?.message?.content ?? "";
+        const toolRequests = parseToolRequests(data);
+        if (!content && !toolRequests.length) throw new Error("Local LLM server returned an unexpected response.");
 
-        return { content, model: data?.model ?? resolved.localModel };
+        return { content, model: data?.model ?? resolved.localModel, toolRequests };
     }
 }

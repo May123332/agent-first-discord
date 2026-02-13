@@ -1,7 +1,10 @@
 import { Forms, TextInput } from "@vencord/types/webpack/common";
+import { useSyncExternalStore } from "react";
 import type { Settings as TSettings } from "shared/settings";
 
 import { withAgentDefaults } from "agent/defaults";
+
+import { getAgentToolLog, subscribeAgentToolLog } from "renderer/agentLogStore";
 
 import { VesktopSettingsSwitch } from "./VesktopSettingsSwitch";
 
@@ -15,6 +18,7 @@ function parseCsv(input: string) {
 export function AgentSettings({ settings }: { settings: TSettings; }) {
     const agent = withAgentDefaults(settings.agent);
     settings.agent ??= agent;
+    const logEntries = useSyncExternalStore(subscribeAgentToolLog, getAgentToolLog, getAgentToolLog);
 
     return (
         <Forms.FormSection>
@@ -54,6 +58,18 @@ export function AgentSettings({ settings }: { settings: TSettings; }) {
                 onChange={v => (settings.agent = { ...agent, enabledChannels: parseCsv(v) })}
             />
 
+            <Forms.FormTitle>Tool Allowlist Channel IDs (comma-separated; leave empty for all)</Forms.FormTitle>
+            <TextInput
+                value={(agent.toolEnabledChannels ?? []).join(",")}
+                onChange={v => (settings.agent = { ...agent, toolEnabledChannels: parseCsv(v) })}
+            />
+
+            <Forms.FormTitle>Tool Allowlist Guild IDs (comma-separated; leave empty for all guilds)</Forms.FormTitle>
+            <TextInput
+                value={(agent.toolEnabledGuilds ?? []).join(",")}
+                onChange={v => (settings.agent = { ...agent, toolEnabledGuilds: parseCsv(v) })}
+            />
+
             <Forms.FormTitle>Temperature</Forms.FormTitle>
             <TextInput value={String(agent.temperature)} onChange={v => (settings.agent = { ...agent, temperature: Number(v) || 0 })} />
 
@@ -85,6 +101,13 @@ export function AgentSettings({ settings }: { settings: TSettings; }) {
                 {agent.mode === "local"
                     ? "Local mode uses a compatible server (default http://localhost:8000/v1/chat/completions)."
                     : "Online mode reads OPENAI_API_KEY or ANTHROPIC_API_KEY from your environment."}
+            </Forms.FormText>
+
+            <Forms.FormTitle>Local Tool Invocation Log</Forms.FormTitle>
+            <Forms.FormText>
+                {logEntries.length
+                    ? logEntries.slice(0, 10).map(entry => `${entry.timestamp} [${entry.status}] ${entry.toolName} (${entry.channelId}) - ${entry.summary}`).join("\n")
+                    : "No tool activity yet."}
             </Forms.FormText>
         </Forms.FormSection>
     );

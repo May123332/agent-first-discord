@@ -18,6 +18,8 @@ export function withAgentDefaults(settings?: AgentSettings): AgentSettings {
     return {
         ...DEFAULT_AGENT_SETTINGS,
         ...settings,
-        enabledChannels: settings?.enabledChannels ?? []
+        enabledChannels: settings?.enabledChannels ?? [],
+        toolEnabledChannels: settings?.toolEnabledChannels ?? [],
+        toolEnabledGuilds: settings?.toolEnabledGuilds ?? []
     };
 }
