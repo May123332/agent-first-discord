@@ -1,5 +1,8 @@
 import { withAgentDefaults } from "agent/defaults";
-import type { AgentChatMessage } from "agent/types";
+import { buildChannelMemory, type ChannelMessageSnapshot } from "agent/core/memory";
+import { assembleChannelPrompt } from "agent/core/prompt";
+import { isContentAllowed, shouldInvokeAgent } from "agent/core/policy";
+import { applyMinuteRateLimit } from "agent/core/rateLimit";
 
 import { VesktopLogger } from "./logger";
 import { Settings } from "./settings";
@@ -7,24 +10,6 @@ import { Settings } from "./settings";
 const invocationTimes = new Map<string, number[]>();
 const lastHandledMessageByChannel = new Map<string, string>();
 const inFlightChannels = new Set<string>();
-
-function nowMinuteWindow(times: number[], maxPerMinute: number) {
-    const cutoff = Date.now() - 60_000;
-    const next = times.filter(t => t >= cutoff);
-    if (next.length >= maxPerMinute) return { allowed: false, times: next };
-    next.push(Date.now());
-    return { allowed: true, times: next };
-}
-
-function shouldInvoke(content: string, mentionName: string, prefix: string) {
-    const lowered = content.toLowerCase();
-    return lowered.includes(`@${mentionName.toLowerCase()}`) || lowered.trimStart().startsWith(prefix.toLowerCase());
-}
-
-function contentAllowed(content: string) {
-    const blocked = ["token:", "password", "credit card"];
-    return !blocked.some(s => content.toLowerCase().includes(s));
-}
 
 function getLatestMessageData() {
     const messages = Array.from(document.querySelectorAll('[id^="message-content-"]')) as HTMLElement[];
@@ -38,11 +23,15 @@ function getLatestMessageData() {
     };
 }
 
-function buildHistory(messages: HTMLElement[]): AgentChatMessage[] {
-    return messages.slice(-12).map(message => ({
-        role: "user",
-        content: message.innerText.slice(0, 1200)
-    }));
+function toSnapshots(messages: HTMLElement[]): ChannelMessageSnapshot[] {
+    return messages.map(message => ({ content: message.innerText }));
+}
+
+function getRecentParticipants() {
+    return Array.from(document.querySelectorAll('[id^="message-username-"]'))
+        .slice(-20)
+        .map(node => (node as HTMLElement).innerText)
+        .filter(Boolean);
 }
 
 export function initAgentMediator() {
@@ -61,28 +50,38 @@ export function initAgentMediator() {
         if (lastHandledMessageByChannel.get(channel) === latestMessageId) return;
 
         const content = latest.innerText?.trim();
-        if (!content || !shouldInvoke(content, settings.mentionName!, settings.invocationPrefix!)) return;
-        if (!contentAllowed(content)) return;
+        if (!content) return;
 
-        const bucket = invocationTimes.get(channel) ?? [];
-        const rate = nowMinuteWindow(bucket, settings.rateLimitPerMinute!);
-        invocationTimes.set(channel, rate.times);
+        if (!shouldInvokeAgent({ content, mentionName: settings.mentionName!, invocationPrefix: settings.invocationPrefix! })) return;
+        if (!isContentAllowed(content)) return;
+
+        const rate = applyMinuteRateLimit(invocationTimes.get(channel) ?? [], settings.rateLimitPerMinute!);
+        invocationTimes.set(channel, rate.nextBucket);
         if (!rate.allowed) return;
 
-        const participants = Array.from(document.querySelectorAll('[id^="message-username-"]'))
-            .slice(-20)
-            .map(node => (node as HTMLElement).innerText)
-            .filter(Boolean);
-
-        const prompt = [
-            `Channel ID: ${channel}`,
-            `Participants: ${Array.from(new Set(participants)).join(", ")}`,
-            "You are an AI participant in a shared Discord channel. Reply succinctly and helpfully.",
-            `User invocation: ${content}`
-        ].join("\n");
+        const prompt = assembleChannelPrompt({
+            channelId: channel,
+            participants: getRecentParticipants(),
+            invocationContent: content
+        });
 
         inFlightChannels.add(channel);
-        VesktopNative.agent.chat(prompt, buildHistory(messages), settings)
+        VesktopNative.agent.invoke({
+            prompt,
+            history: buildChannelMemory(toSnapshots(messages)),
+            settings,
+            transport: "ipc-local",
+            session: {
+                sessionId: channel,
+                channelId: channel,
+                userId: "discord-local-user"
+            },
+            auth: {
+                actorId: "discord-local-user",
+                actorDisplayName: "Local Desktop User",
+                channelRole: "member"
+            }
+        })
             .then(reply => {
                 if (!reply?.content) return;
 
