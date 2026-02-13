@@ -1,6 +1,6 @@
 import type { AgentSettings } from "shared/settings";
 
-export const DEFAULT_AGENT_SETTINGS: Required<Pick<AgentSettings, "enabled" | "mode" | "localUrl" | "onlineProvider" | "onlineModel" | "localModel" | "temperature" | "maxTokens" | "invocationPrefix" | "mentionName" | "rateLimitPerMinute">> = {
+export const DEFAULT_AGENT_SETTINGS: Required<Pick<AgentSettings, "enabled" | "mode" | "localUrl" | "onlineProvider" | "onlineModel" | "localModel" | "temperature" | "maxTokens" | "invocationPrefix" | "mentionName" | "rateLimitPerMinute" | "memoryDepth" | "summaryFrequency" | "memoryTokenBudget">> = {
     enabled: true,
     mode: "local",
     localUrl: process.env.LOCAL_LLM_URL ?? "http://localhost:8000/v1/chat/completions",
@@ -11,7 +11,10 @@ export const DEFAULT_AGENT_SETTINGS: Required<Pick<AgentSettings, "enabled" | "m
     maxTokens: 500,
     invocationPrefix: "!agent",
     mentionName: "agent",
-    rateLimitPerMinute: 8
+    rateLimitPerMinute: 8,
+    memoryDepth: 12,
+    summaryFrequency: 6,
+    memoryTokenBudget: 2400
 };
 
 export function withAgentDefaults(settings?: AgentSettings): AgentSettings {

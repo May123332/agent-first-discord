@@ -1,3 +1,4 @@
+import { agentMemoryStore } from "agent/memoryStore";
 import { withAgentDefaults } from "agent/defaults";
 import type { AgentChatMessage } from "agent/types";
 
@@ -38,11 +39,20 @@ function getLatestMessageData() {
     };
 }
 
-function buildHistory(messages: HTMLElement[]): AgentChatMessage[] {
-    return messages.slice(-12).map(message => ({
+function getParticipants() {
+    return Array.from(document.querySelectorAll('[id^="message-username-"]'))
+        .slice(-20)
+        .map(node => (node as HTMLElement).innerText)
+        .filter(Boolean);
+}
+
+function toCanonicalMessage(content: string, participants: string[]): AgentChatMessage {
+    return {
         role: "user",
-        content: message.innerText.slice(0, 1200)
-    }));
+        author: participants[participants.length - 1] || "User",
+        content: content.slice(0, 1200),
+        timestamp: new Date().toISOString()
+    };
 }
 
 export function initAgentMediator() {
@@ -57,7 +67,7 @@ export function initAgentMediator() {
         const latestMessageData = getLatestMessageData();
         if (!latestMessageData) return;
 
-        const { messages, latest, latestMessageId } = latestMessageData;
+        const { latest, latestMessageId } = latestMessageData;
         if (lastHandledMessageByChannel.get(channel) === latestMessageId) return;
 
         const content = latest.innerText?.trim();
@@ -69,20 +79,14 @@ export function initAgentMediator() {
         invocationTimes.set(channel, rate.times);
         if (!rate.allowed) return;
 
-        const participants = Array.from(document.querySelectorAll('[id^="message-username-"]'))
-            .slice(-20)
-            .map(node => (node as HTMLElement).innerText)
-            .filter(Boolean);
-
-        const prompt = [
-            `Channel ID: ${channel}`,
-            `Participants: ${Array.from(new Set(participants)).join(", ")}`,
-            "You are an AI participant in a shared Discord channel. Reply succinctly and helpfully.",
-            `User invocation: ${content}`
-        ].join("\n");
+        const participants = getParticipants();
+        const canonicalUserMessage = toCanonicalMessage(content, participants);
+        agentMemoryStore.appendMessage(channel, canonicalUserMessage, settings, participants);
+        agentMemoryStore.maybeSummarize(channel, settings);
+        const payload = agentMemoryStore.buildPromptPayload(channel, content, settings);
 
         inFlightChannels.add(channel);
-        VesktopNative.agent.chat(prompt, buildHistory(messages), settings)
+        VesktopNative.agent.chat(payload.prompt, payload.history, settings)
             .then(reply => {
                 if (!reply?.content) return;
 
@@ -92,6 +96,15 @@ export function initAgentMediator() {
                 composer.focus();
                 document.execCommand("insertText", false, reply.content);
                 composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+                agentMemoryStore.appendMessage(channel, {
+                    role: "assistant",
+                    author: settings.mentionName,
+                    content: reply.content,
+                    timestamp: new Date().toISOString()
+                }, settings, participants);
+                agentMemoryStore.maybeSummarize(channel, settings);
+
                 lastHandledMessageByChannel.set(channel, latestMessageId);
             })
             .catch(err => {

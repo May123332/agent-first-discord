@@ -64,6 +64,9 @@ export interface AgentSettings {
     mentionName?: string;
     enabledChannels?: string[];
     rateLimitPerMinute?: number;
+    memoryDepth?: number;
+    summaryFrequency?: number;
+    memoryTokenBudget?: number;
 }
 
 export interface State {

@@ -63,6 +63,12 @@ export function AgentSettings({ settings }: { settings: TSettings; }) {
             <Forms.FormTitle>Rate Limit / Minute</Forms.FormTitle>
             <TextInput value={String(agent.rateLimitPerMinute)} onChange={v => (settings.agent = { ...agent, rateLimitPerMinute: Number(v) || 1 })} />
 
+            <Forms.FormTitle>Memory Depth (turns)</Forms.FormTitle>
+            <TextInput value={String(agent.memoryDepth)} onChange={v => (settings.agent = { ...agent, memoryDepth: Number(v) || 1 })} />
+
+            <Forms.FormTitle>Summary Frequency (turns)</Forms.FormTitle>
+            <TextInput value={String(agent.summaryFrequency)} onChange={v => (settings.agent = { ...agent, summaryFrequency: Number(v) || 1 })} />
+
             {agent.mode === "local" && (
                 <>
                     <Forms.FormTitle>Local Endpoint URL</Forms.FormTitle>
