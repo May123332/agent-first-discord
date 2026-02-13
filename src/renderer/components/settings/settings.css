@@ -55,3 +55,25 @@
 .vcd-agent-label {
     margin: 8px 0;
 }
+
+.vcd-agent-policy-row,
+.vcd-agent-policy-roles-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.vcd-agent-policy-roles-row > div {
+    flex: 1;
+}
+
+.vcd-agent-policy-add,
+.vcd-agent-policy-remove {
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 6px 10px;
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    cursor: pointer;
+    margin-bottom: 10px;
+}

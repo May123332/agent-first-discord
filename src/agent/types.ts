@@ -19,6 +19,12 @@ export interface AgentResponse {
     model?: string;
 }
 
+export interface AgentInvocationContext {
+    guildId?: string;
+    channelId?: string;
+    invokerRoleIds?: string[];
+}
+
 export interface AgentClient {
     sendMessage(prompt: string, history: AgentChatMessage[], settings: AgentSettings): Promise<AgentResponse>;
 }
