@@ -1,10 +1,15 @@
-import type { AgentSettings } from "shared/settings";
+/*
+ * Vesktop, a desktop app aiming to give you a snappier Discord Experience
+ * Copyright (c) 2026 Vendicated and Vesktop contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
 
 import { withAgentDefaults } from "agent/defaults";
 import { LocalLlmClient } from "agent/localClient";
 import { OnlineLlmClient } from "agent/onlineClient";
 import { checkAgentPolicy } from "agent/policy";
-import type { AgentChatMessage, AgentInvocationContext } from "agent/types";
+import type { AgentChatMessage } from "agent/types";
+import type { AgentSettings } from "shared/settings";
 
 import { Settings } from "./settings";
 

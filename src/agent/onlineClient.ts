@@ -1,11 +1,20 @@
+/*
+ * Vesktop, a desktop app aiming to give you a snappier Discord Experience
+ * Copyright (c) 2026 Vendicated and Vesktop contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 import type { AgentSettings } from "shared/settings";
 
-import type { AgentChatMessage, AgentClient, AgentResponse } from "./types";
 import { withAgentDefaults } from "./defaults";
+import type { AgentChatMessage, AgentClient, AgentResponse } from "./types";
 
 function requireEnv(name: string) {
     const value = process.env[name];
-    if (!value) throw new Error(`Missing environment variable ${name}. Add it to your environment before enabling online mode.`);
+    if (!value)
+        throw new Error(
+            `Missing environment variable ${name}. Add it to your environment before enabling online mode.`
+        );
     return value;
 }
 
@@ -26,12 +35,18 @@ export class OnlineLlmClient implements AgentClient {
                     model: resolved.onlineModel,
                     max_tokens: resolved.maxTokens,
                     temperature: resolved.temperature,
-                    messages: [...history.map(h => ({ role: h.role === "assistant" ? "assistant" : "user", content: h.content })), { role: "user", content: prompt }]
+                    messages: [
+                        ...history.map(h => ({
+                            role: h.role === "assistant" ? "assistant" : "user",
+                            content: h.content
+                        })),
+                        { role: "user", content: prompt }
+                    ]
                 })
             });
 
             if (!response.ok) throw new Error(`Anthropic API error (${response.status} ${response.statusText})`);
-            const data = await response.json() as any;
+            const data = (await response.json()) as any;
             const content = data?.content?.[0]?.text;
             if (!content) throw new Error("Anthropic returned no content.");
             return { content, model: data?.model ?? resolved.onlineModel };
@@ -48,12 +63,15 @@ export class OnlineLlmClient implements AgentClient {
                 model: resolved.onlineModel,
                 temperature: resolved.temperature,
                 max_tokens: resolved.maxTokens,
-                messages: [...history.map(h => ({ role: h.role, content: h.content })), { role: "user", content: prompt }]
+                messages: [
+                    ...history.map(h => ({ role: h.role, content: h.content })),
+                    { role: "user", content: prompt }
+                ]
             })
         });
 
         if (!response.ok) throw new Error(`OpenAI API error (${response.status} ${response.statusText})`);
-        const data = await response.json() as any;
+        const data = (await response.json()) as any;
         const content = data?.choices?.[0]?.message?.content;
         if (!content) throw new Error("OpenAI returned no content.");
 
