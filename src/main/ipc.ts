@@ -161,8 +161,8 @@ handle(IpcEvents.DEBUG_LAUNCH_GPU, () => openDebugPage("chrome://gpu"));
 handle(IpcEvents.DEBUG_LAUNCH_WEBRTC_INTERNALS, () => openDebugPage("chrome://webrtc-internals"));
 
 handleSync(IpcEvents.AGENT_GET_MODE, () => getCurrentAgentMode());
-handle(IpcEvents.AGENT_CHAT, async (_, prompt: string, history: any[], settings?: any) => {
-    return chatWithAgent(prompt, history, settings);
+handle(IpcEvents.AGENT_CHAT, async (_, prompt: string, history: any[], settings?: any, context?: any) => {
+    return chatWithAgent(prompt, history, settings, context);
 });
 
 function readCss() {

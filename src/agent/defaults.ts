@@ -5,6 +5,7 @@
  */
 
 import type { AgentSettings } from "shared/settings";
+import { migrateAgentSettings } from "./policy";
 
 export const DEFAULT_AGENT_SETTINGS: Required<
     Pick<
@@ -36,9 +37,10 @@ export const DEFAULT_AGENT_SETTINGS: Required<
 };
 
 export function withAgentDefaults(settings?: AgentSettings): AgentSettings {
+    const migrated = migrateAgentSettings(settings);
+
     return {
         ...DEFAULT_AGENT_SETTINGS,
-        ...settings,
-        enabledChannels: settings?.enabledChannels ?? []
+        ...migrated
     };
 }
