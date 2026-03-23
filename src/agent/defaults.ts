@@ -33,7 +33,10 @@ export const DEFAULT_AGENT_SETTINGS: Required<
     maxTokens: 500,
     invocationPrefix: "!agent",
     mentionName: "agent",
-    rateLimitPerMinute: 8
+    rateLimitPerMinute: 8,
+    memoryDepth: 12,
+    summaryFrequency: 6,
+    memoryTokenBudget: 2400
 };
 
 export function withAgentDefaults(settings?: AgentSettings): AgentSettings {

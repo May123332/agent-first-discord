@@ -75,6 +75,9 @@ export interface AgentSettings {
     enabledChannels?: string[];
     policy?: AgentPolicySettings;
     rateLimitPerMinute?: number;
+    memoryDepth?: number;
+    summaryFrequency?: number;
+    memoryTokenBudget?: number;
 }
 
 export interface State {
