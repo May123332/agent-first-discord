@@ -1,6 +1,28 @@
-import type { AgentSettings } from "shared/settings";
+/*
+ * Vesktop, a desktop app aiming to give you a snappier Discord Experience
+ * Copyright (c) 2026 Vendicated and Vesktop contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
 
-export const DEFAULT_AGENT_SETTINGS: Required<Pick<AgentSettings, "enabled" | "mode" | "localUrl" | "onlineProvider" | "onlineModel" | "localModel" | "temperature" | "maxTokens" | "invocationPrefix" | "mentionName" | "rateLimitPerMinute">> = {
+import type { AgentSettings } from "shared/settings";
+import { migrateAgentSettings } from "./policy";
+
+export const DEFAULT_AGENT_SETTINGS: Required<
+    Pick<
+        AgentSettings,
+        | "enabled"
+        | "mode"
+        | "localUrl"
+        | "onlineProvider"
+        | "onlineModel"
+        | "localModel"
+        | "temperature"
+        | "maxTokens"
+        | "invocationPrefix"
+        | "mentionName"
+        | "rateLimitPerMinute"
+    >
+> = {
     enabled: true,
     mode: "local",
     localUrl: process.env.LOCAL_LLM_URL ?? "http://localhost:8000/v1/chat/completions",
@@ -11,15 +33,17 @@ export const DEFAULT_AGENT_SETTINGS: Required<Pick<AgentSettings, "enabled" | "m
     maxTokens: 500,
     invocationPrefix: "!agent",
     mentionName: "agent",
-    rateLimitPerMinute: 8
+    rateLimitPerMinute: 8,
+    memoryDepth: 12,
+    summaryFrequency: 6,
+    memoryTokenBudget: 2400
 };
 
 export function withAgentDefaults(settings?: AgentSettings): AgentSettings {
+    const migrated = migrateAgentSettings(settings);
+
     return {
         ...DEFAULT_AGENT_SETTINGS,
-        ...settings,
-        enabledChannels: settings?.enabledChannels ?? [],
-        toolEnabledChannels: settings?.toolEnabledChannels ?? [],
-        toolEnabledGuilds: settings?.toolEnabledGuilds ?? []
+        ...migrated
     };
 }

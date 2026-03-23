@@ -1,7 +1,14 @@
+/*
+ * Vesktop, a desktop app aiming to give you a snappier Discord Experience
+ * Copyright (c) 2026 Vendicated and Vesktop contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 import type { AgentSettings } from "shared/settings";
 
 import type { AgentClient, AgentPromptTurn, AgentResponse, AgentToolRequest } from "./types";
 import { withAgentDefaults } from "./defaults";
+import type { AgentChatMessage, AgentClient, AgentResponse } from "./types";
 
 function toOpenAiMessages(turn: AgentPromptTurn) {
     const base = [...turn.history.map(h => ({ role: h.role, content: h.content })), { role: "user", content: turn.prompt }];
