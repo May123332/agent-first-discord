@@ -6,8 +6,10 @@
 
 import { Node } from "@vencord/venmic";
 import { ipcRenderer } from "electron";
+import type { AgentPromptTurn, AgentResponse } from "agent/types";
 import { IpcMessage, IpcResponse } from "main/ipcCommands";
-import type { AgentInvokeRequest, AgentInvokeResponse } from "agent/service/types";
+import type { AgentChatMessage, AgentResponse } from "agent/types";
+import type { AgentInvocationContext } from "agent/types";
 import type { Settings } from "shared/settings";
 
 import { IpcEvents } from "../shared/IpcEvents";
@@ -93,8 +95,8 @@ export const VesktopNative = {
     },
     agent: {
         getMode: () => sendSync<"local" | "online">(IpcEvents.AGENT_GET_MODE),
-        invoke: (request: AgentInvokeRequest) =>
-            invoke<AgentInvokeResponse>(IpcEvents.AGENT_INVOKE, request)
+        chat: (prompt: string, history: any[], settings?: any, context?: AgentInvocationContext) =>
+            invoke<{ content: string; model?: string }>(IpcEvents.AGENT_CHAT, prompt, history, settings, context)
     },
     commands: {
         onCommand(cb: (message: IpcMessage) => void) {

@@ -6,6 +6,7 @@
 
 import "./ipc";
 
+import { resolveAgentMode } from "agent/startupMode";
 import { app, BrowserWindow, nativeTheme } from "electron";
 import { autoUpdater } from "electron-updater";
 
@@ -13,7 +14,6 @@ import { DATA_DIR } from "./constants";
 import { createFirstLaunchTour } from "./firstLaunch";
 import { createWindows, mainWin } from "./mainWindow";
 import { registerMediaPermissionsHandler } from "./mediaPermissions";
-import { resolveAgentMode } from "agent/startupMode";
 import { registerScreenShareHandler } from "./screenShare";
 import { Settings, State } from "./settings";
 import { isDeckGameMode } from "./utils/steamOS";
