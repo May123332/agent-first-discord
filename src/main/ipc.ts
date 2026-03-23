@@ -24,6 +24,8 @@ import { enableHardwareAcceleration } from "main";
 import { release } from "os";
 import { join } from "path";
 import { debounce } from "shared/utils/debounce";
+import type { AgentChatMessage } from "agent/types";
+import type { AgentSettings } from "shared/settings";
 
 import { IpcEvents } from "../shared/IpcEvents";
 import { chatWithAgent, getCurrentAgentMode } from "./agentService";

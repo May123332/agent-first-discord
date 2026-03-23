@@ -12,6 +12,7 @@ import { ComponentType } from "react";
 import { Settings, useSettings } from "renderer/settings";
 import { isMac, isWindows } from "renderer/utils";
 
+import { AgentDiagnostics } from "./AgentDiagnostics";
 import { AgentSettings } from "./AgentSettings";
 import { AutoStartToggle } from "./AutoStartToggle";
 import { DeveloperOptionsButton } from "./DeveloperOptions";
@@ -139,7 +140,7 @@ const SettingsOptions: Record<string, Array<BooleanSetting | SettingsComponent>>
         RateRepoButton
     ],
     "Developer Options": [DeveloperOptionsButton],
-    "AI Agent": [AgentSettings]
+    "AI Agent": [AgentSettings, AgentDiagnostics]
 };
 
 function SettingsSections() {

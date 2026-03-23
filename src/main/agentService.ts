@@ -8,6 +8,7 @@ import { withAgentDefaults } from "agent/defaults";
 import { LocalLlmClient } from "agent/localClient";
 import { OnlineLlmClient } from "agent/onlineClient";
 import { withAgentDefaults } from "agent/defaults";
+import type { AgentChatMessage, AgentErrorCategory, AgentTraceEvent } from "agent/types";
 import type { AgentPromptTurn } from "agent/types";
 import { checkAgentPolicy } from "agent/policy";
 import type { AgentChatMessage } from "agent/types";
@@ -16,6 +17,19 @@ import type { AgentSettings } from "shared/settings";
 import { Settings } from "./settings";
 
 function estimateTokens(text: string) {
+    return Math.max(1, Math.ceil(text.length / 4));
+}
+
+function getProvider(mode: "local" | "online", settings: AgentSettings) {
+    return mode === "online" ? settings.onlineProvider ?? "openai" : "local";
+}
+
+function getErrorCategory(err: unknown): AgentErrorCategory {
+    const message = String((err as Error | undefined)?.message ?? err).toLowerCase();
+    if (message.includes("missing environment variable")) return "provider_unavailable";
+    if (message.includes("timeout")) return "timeout";
+    if (message.includes("failed to reach") || message.includes("network") || message.includes("fetch")) return "network";
+    return "unknown";
     return Math.ceil((text?.length ?? 0) / 4);
 }
 

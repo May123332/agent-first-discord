@@ -8,6 +8,7 @@ import { Node } from "@vencord/venmic";
 import { ipcRenderer } from "electron";
 import type { AgentPromptTurn, AgentResponse } from "agent/types";
 import { IpcMessage, IpcResponse } from "main/ipcCommands";
+import type { AgentChatMessage, AgentResponse } from "agent/types";
 import type { AgentInvocationContext } from "agent/types";
 import type { Settings } from "shared/settings";
 
