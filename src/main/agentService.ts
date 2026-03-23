@@ -1,10 +1,18 @@
-import { randomUUID } from "crypto";
-import type { AgentSettings } from "shared/settings";
+/*
+ * Vesktop, a desktop app aiming to give you a snappier Discord Experience
+ * Copyright (c) 2026 Vendicated and Vesktop contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
 
+import { withAgentDefaults } from "agent/defaults";
 import { LocalLlmClient } from "agent/localClient";
 import { OnlineLlmClient } from "agent/onlineClient";
 import { withAgentDefaults } from "agent/defaults";
 import type { AgentChatMessage, AgentErrorCategory, AgentTraceEvent } from "agent/types";
+import type { AgentPromptTurn } from "agent/types";
+import { checkAgentPolicy } from "agent/policy";
+import type { AgentChatMessage } from "agent/types";
+import type { AgentSettings } from "shared/settings";
 
 import { Settings } from "./settings";
 
@@ -22,75 +30,44 @@ function getErrorCategory(err: unknown): AgentErrorCategory {
     if (message.includes("timeout")) return "timeout";
     if (message.includes("failed to reach") || message.includes("network") || message.includes("fetch")) return "network";
     return "unknown";
+    return Math.ceil((text?.length ?? 0) / 4);
+}
+
+function enforceTokenBudget(prompt: string, history: AgentChatMessage[], tokenBudget: number) {
+    const cappedPrompt = prompt.slice(0, 4000);
+    const historyBudget = Math.max(tokenBudget - estimateTokens(cappedPrompt), 200);
+    const selected: AgentChatMessage[] = [];
+    let used = 0;
+
+    for (let i = history.length - 1; i >= 0; i--) {
+        const candidate = history[i];
+        const tokens = estimateTokens(`${candidate.role}:${candidate.content}`);
+        if (selected.length && used + tokens > historyBudget) break;
+        selected.unshift(candidate);
+        used += tokens;
+    }
+
+    return { prompt: cappedPrompt, history: selected };
 }
 
 export function getCurrentAgentMode() {
     return withAgentDefaults(Settings.store.agent).mode;
 }
 
-export async function chatWithAgent(prompt: string, history: AgentChatMessage[], settings?: AgentSettings) {
-    const traceId = randomUUID();
-    const startedAt = Date.now();
+export async function chatWithAgent(
+    prompt: string,
+    history: AgentChatMessage[],
+    settings?: AgentSettings,
+    context: AgentInvocationContext = {}
+) {
     const effectiveSettings = withAgentDefaults({ ...Settings.store.agent, ...settings });
-    const mode = effectiveSettings.mode ?? "local";
-    const client = mode === "online" ? new OnlineLlmClient() : new LocalLlmClient();
-    const traceEvents: AgentTraceEvent[] = [];
-    const basePromptTokens = estimateTokens(prompt) + history.reduce((sum, entry) => sum + estimateTokens(entry.content), 0);
+    const policy = checkAgentPolicy(effectiveSettings, context);
 
-    traceEvents.push({
-        traceId,
-        timestamp: new Date().toISOString(),
-        eventType: "model_request_start",
-        provider: getProvider(mode, effectiveSettings),
-        mode,
-        retryCount: 0,
-        latencyMs: 0,
-        tokenEstimatePrompt: basePromptTokens,
-        tokenEstimateCompletion: 0,
-        tokenEstimateTotal: basePromptTokens
-    });
-
-    try {
-        const response = await client.sendMessage(prompt, history, effectiveSettings);
-        const completionTokens = estimateTokens(response.content ?? "");
-        const latencyMs = Date.now() - startedAt;
-
-        traceEvents.push({
-            traceId,
-            timestamp: new Date().toISOString(),
-            eventType: "model_request_end",
-            provider: getProvider(mode, effectiveSettings),
-            mode,
-            retryCount: 0,
-            latencyMs,
-            tokenEstimatePrompt: basePromptTokens,
-            tokenEstimateCompletion: completionTokens,
-            tokenEstimateTotal: basePromptTokens + completionTokens
-        });
-
-        return {
-            ...response,
-            traceId,
-            traceEvents
-        };
-    } catch (err) {
-        traceEvents.push({
-            traceId,
-            timestamp: new Date().toISOString(),
-            eventType: "error",
-            provider: getProvider(mode, effectiveSettings),
-            mode,
-            retryCount: 0,
-            latencyMs: Date.now() - startedAt,
-            tokenEstimatePrompt: basePromptTokens,
-            tokenEstimateCompletion: 0,
-            tokenEstimateTotal: basePromptTokens,
-            errorCategory: getErrorCategory(err),
-            details: String((err as Error | undefined)?.message ?? err)
-        });
-        throw Object.assign(err instanceof Error ? err : new Error(String(err)), {
-            traceId,
-            traceEvents
-        });
+    if (!policy.allowed) {
+        return { content: "agent disabled in this channel" };
     }
+
+    const client = effectiveSettings.mode === "online" ? new OnlineLlmClient() : new LocalLlmClient();
+          const payload = enforceTokenBudget(prompt, history, Math.max(effectiveSettings.memoryTokenBudget ?? 2400, 600));
+            return client.sendMessage(payload.prompt, payload.history, effectiveSettings);
 }

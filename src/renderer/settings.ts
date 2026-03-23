@@ -5,12 +5,16 @@
  */
 
 import { useEffect, useReducer } from "@vencord/types/webpack/common";
+import { migrateAgentSettings } from "agent/policy";
 import { SettingsStore } from "shared/utils/SettingsStore";
 
 import { VesktopLogger } from "./logger";
 import { localStorage } from "./utils";
 
-export const Settings = new SettingsStore(VesktopNative.settings.get());
+const initialSettings = VesktopNative.settings.get();
+initialSettings.agent = migrateAgentSettings(initialSettings.agent);
+
+export const Settings = new SettingsStore(initialSettings);
 Settings.addGlobalChangeListener((o, p) => VesktopNative.settings.set(o, p));
 
 export function useSettings() {
