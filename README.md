@@ -33,6 +33,25 @@ Notes:
 - API keys are never hardcoded; online mode requires env variables.
 - Local mode reports a clear error if the local inference server is unavailable.
 
+## Architecture boundary (agent core and invoke service)
+
+The AI stack is split so provider-agnostic orchestration can be reused in-process today and moved to a remote service later:
+
+- `src/agent/core/*` contains pure TypeScript logic for invocation policy checks, channel memory extraction, prompt assembly, and per-channel rate limiting.
+- Renderer code (`src/renderer/agentMediator.ts`) gathers Discord DOM state and delegates decision-making/orchestration to `src/agent/core/*`.
+- `src/agent/service/types.ts` defines the `agent invoke` endpoint contract (`AgentInvokeRequest` / `AgentInvokeResponse` / `AgentInvokeService`).
+- `src/agent/service/localAgentInvokeService.ts` is the current in-process adapter used by Electron main via IPC.
+
+### Remote-ready auth/session model
+
+For a future remote agent backend, `AgentInvokeRequest` already carries explicit identity/session context:
+
+- `session`: stable session and channel binding (`sessionId`, `channelId`, `userId`, optional `workspaceId`) so multi-user channels can be scoped safely.
+- `auth`: actor metadata and optional bearer token (`actorId`, display name, channel role, token) for access control and auditability.
+- `transport`: source marker (`ipc-local` now, `http-remote` later) so policy and telemetry-free diagnostics can branch without changing provider clients.
+
+This keeps the provider client contract unified (`sendMessage(prompt, history, settings)`) while allowing the invoke boundary to move from Electron IPC to HTTP without changing core logic.
+
 ## Building installers
 
 - Build all platforms: `pnpm dist` (runs `electron-builder --mac --win --linux`)
