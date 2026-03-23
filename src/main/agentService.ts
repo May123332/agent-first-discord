@@ -1,9 +1,15 @@
-import type { AgentSettings } from "shared/settings";
+/*
+ * Vesktop, a desktop app aiming to give you a snappier Discord Experience
+ * Copyright (c) 2026 Vendicated and Vesktop contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
 
+import { withAgentDefaults } from "agent/defaults";
 import { LocalLlmClient } from "agent/localClient";
 import { OnlineLlmClient } from "agent/onlineClient";
-import { withAgentDefaults } from "agent/defaults";
+import { checkAgentPolicy } from "agent/policy";
 import type { AgentChatMessage } from "agent/types";
+import type { AgentSettings } from "shared/settings";
 
 import { Settings } from "./settings";
 
@@ -32,10 +38,20 @@ export function getCurrentAgentMode() {
     return withAgentDefaults(Settings.store.agent).mode;
 }
 
-export async function chatWithAgent(prompt: string, history: AgentChatMessage[], settings?: AgentSettings) {
+export async function chatWithAgent(
+    prompt: string,
+    history: AgentChatMessage[],
+    settings?: AgentSettings,
+    context: AgentInvocationContext = {}
+) {
     const effectiveSettings = withAgentDefaults({ ...Settings.store.agent, ...settings });
-    const client = effectiveSettings.mode === "online" ? new OnlineLlmClient() : new LocalLlmClient();
-    const payload = enforceTokenBudget(prompt, history, Math.max(effectiveSettings.memoryTokenBudget ?? 2400, 600));
+    const policy = checkAgentPolicy(effectiveSettings, context);
 
-    return client.sendMessage(payload.prompt, payload.history, effectiveSettings);
+    if (!policy.allowed) {
+        return { content: "agent disabled in this channel" };
+    }
+
+    const client = effectiveSettings.mode === "online" ? new OnlineLlmClient() : new LocalLlmClient();
+          const payload = enforceTokenBudget(prompt, history, Math.max(effectiveSettings.memoryTokenBudget ?? 2400, 600));
+            return client.sendMessage(payload.prompt, payload.history, effectiveSettings);
 }

@@ -1,3 +1,9 @@
+/*
+ * Vesktop, a desktop app aiming to give you a snappier Discord Experience
+ * Copyright (c) 2026 Vendicated and Vesktop contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 import type { AgentMode, AgentSettings } from "shared/settings";
 
 export interface AgentChatMessage {
@@ -17,6 +23,12 @@ export interface ChannelContext {
 export interface AgentResponse {
     content: string;
     model?: string;
+}
+
+export interface AgentInvocationContext {
+    guildId?: string;
+    channelId?: string;
+    invokerRoleIds?: string[];
 }
 
 export interface AgentClient {

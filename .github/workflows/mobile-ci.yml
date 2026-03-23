@@ -1,0 +1,26 @@
+name: Mobile CI
+
+on:
+    workflow_dispatch:
+    pull_request:
+        paths:
+            - mobile/**
+            - .github/workflows/mobile-ci.yml
+    push:
+        branches:
+            - main
+        paths:
+            - mobile/**
+            - .github/workflows/mobile-ci.yml
+
+permissions:
+    contents: read
+
+jobs:
+    mobile-preflight:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Mobile pipeline placeholder
+              run: |
+                  echo "Mobile CI is intentionally isolated from desktop release artifacts."
+                  echo "Add Android/iOS build and distribution steps here as mobile support lands."
