@@ -73,6 +73,8 @@ export interface AgentSettings {
     mentionName?: string;
     /** @deprecated use policy.allowedChannelIds instead */
     enabledChannels?: string[];
+    toolEnabledChannels?: string[];
+    toolEnabledGuilds?: string[];
     policy?: AgentPolicySettings;
     rateLimitPerMinute?: number;
     memoryDepth?: number;

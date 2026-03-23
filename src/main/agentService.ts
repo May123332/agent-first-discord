@@ -7,6 +7,8 @@
 import { withAgentDefaults } from "agent/defaults";
 import { LocalLlmClient } from "agent/localClient";
 import { OnlineLlmClient } from "agent/onlineClient";
+import { withAgentDefaults } from "agent/defaults";
+import type { AgentPromptTurn } from "agent/types";
 import { checkAgentPolicy } from "agent/policy";
 import type { AgentChatMessage } from "agent/types";
 import type { AgentSettings } from "shared/settings";
